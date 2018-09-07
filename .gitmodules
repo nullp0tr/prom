@@ -1,0 +1,6 @@
+[submodule "libtracer"]
+	path = libtracer
+	url = https://github.com/nullp0tr/libtracer
+[submodule "libvterm"]
+	path = libvterm
+	url = https://github.com/neovim/libvterm
