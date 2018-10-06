@@ -1,5 +1,23 @@
+/*
+ * prom: a terminal/shell hijacker that extends a shell with extra
+ * functionality. Copyright (C) 2018  Ahmed Alsharif
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #include "modules/mods.h"
 #include "prom.h"
+#include <stdbool.h>
 #include <string.h>
 
 const char *module_add_usage = "usage: prom-module-add path\n";
@@ -34,7 +52,7 @@ static int cmd_arg_add(int argc, char *argv[]) {
     if (am == -1) {
         fprintf(stderr, "Failed to add module from %s: ", mod_path);
         if (errno == EEXIST) {
-            fprintf(stderr, "Plugin with name %s exists already.", mod.name);
+            fprintf(stderr, "Module with name %s exists already.", mod.name);
         } else {
             fprintf(stderr, "%s", strerror(errno));
         }
@@ -48,7 +66,7 @@ unload_mod:
 clean_abs_mod_path:
     free(abs_mod_path);
 exit_proc:
-    exit(exit_status);
+    return exit_status;
 }
 
 const char *module_remove_usage = "usage: prom-module-remove name\n";
@@ -60,8 +78,13 @@ static int cmd_arg_remove(int argc, char *argv[]) {
 
     const char *mod_name = argv[1];
 
-    if (rm_module(mod_name) == -1) {
-        perror("Failed to remove module");
+    err_int rm = rm_module(mod_name);
+    if (rm == -1) {
+        if (errno == ENOENT) {
+            fprintf(stderr, "Module with name %s doesn't exist.\n", mod_name);
+        } else {
+            fprintf(stderr, "%s. %d\n", strerror(errno), errno);
+        }
         return 1;
     }
 
@@ -70,24 +93,61 @@ static int cmd_arg_remove(int argc, char *argv[]) {
 
 static int cmd_arg_list(int argc, char *argv[]) {
     (void)argc, (void)argv;
+    bool f_clean = false;
+    for (int i = 0; i < argc; i++) {
+        if (!strcmp(argv[i], "--clean"))
+            f_clean = true;
+    }
 
-    // char **modules = module_names();
-    // for (char **mod = modules; *mod; mod++) {
-    //     printf("%s\n", *mod);
-    // }
-    // free_module_names(modules);
-    // return 0;
+    if (f_clean) {
+        char **damaged = clean_ul_mod_names();
+        if (!damaged) {
+            goto memerr;
+        }
+        for (char **name = damaged; *name; name++) {
+            printf("Removed: %s\n", *name);
+        }
+        free_ul_mod_names(damaged);
+        return 0;
+    }
 
-    struct module **mods = all_installed_modules("");
+    char **names = mod_names();
+    if (!names) {
+        goto memerr;
+    }
+
+    size_t names_len = 0;
+    for (char **mod_name = names; *mod_name; mod_name++)
+        names_len++;
+
+    free_mod_names(names);
+
+    struct module **mods = installed_mods("");
+    if (!mods) {
+        goto memerr;
+    }
+
+    size_t mods_len = 0;
     for (struct module **mod = mods; *mod; mod++) {
         printf("-----\n");
         printf("Name: %s\n", (*mod)->name);
         printf("Desc: %s\n", (*mod)->desc);
+        mods_len++;
     }
     printf("-----\n");
 
-    free_installed_modules(mods);
+    free_installed_mods(mods);
+
+    if (names_len > mods_len) {
+        printf("Some installed modules have changed location and are "
+               "unloadable.\n");
+        printf("Run 'prom module list --clean' to remove them.\n");
+    }
+
     return 0;
+memerr:
+    fprintf(stderr, "There was an error allocating memory for the Modues\n");
+    return -1;
 }
 
 const char *module_usage = "usage: prom-module <command>\n\n"

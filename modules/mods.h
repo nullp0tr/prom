@@ -1,3 +1,20 @@
+/*
+ * prom: a terminal/shell hijacker that extends a shell with extra
+ * functionality. Copyright (C) 2018  Ahmed Alsharif
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #define _XOPEN_SOURCE 600
 
 #include "../filesystem/filesystem.h"
@@ -18,17 +35,25 @@ struct module {
     struct module_cbs cbs;
 };
 
-char *load_module(const char *path, struct module *mod,
-                  const char *modules_path);
+typedef char dlerr_char;
 
-char *unload_module(struct module *mod);
+dlerr_char *load_module(const char *path, struct module *mod,
+                        const char *modules_path);
+
+dlerr_char *unload_module(struct module *mod);
 
 err_int add_module(const char *path, const char *name);
 
 err_int rm_module(const char *name);
 
-char **module_names();
-void free_module_names(char **module_names);
+char **mod_names();
+void free_mod_names(char **mod_names);
 
-struct module **all_installed_modules(const char *modules_path);
-void free_installed_modules(struct module **modules);
+char **broken_mod_names();
+void free_broken_mod_names();
+
+struct module **installed_mods(const char *modules_path);
+void free_installed_mods(struct module **modules);
+
+char **clean_ul_mod_names();
+void free_ul_mod_names(char **ul_mod_names);

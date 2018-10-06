@@ -1,3 +1,20 @@
+/*
+ * prom: a terminal/shell hijacker that extends a shell with extra
+ * functionality. Copyright (C) 2018  Ahmed Alsharif
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #include "shell.h"
 
 #define SHELL "bash"
@@ -88,7 +105,7 @@ static inline int handle_output() {
     ssize_t bytes_read = read(globe.fd_master, buf, sizeof(buf));
 
     if (bytes_read <= 0) {
-        if (errno == EAGAIN)
+        if (EAGAIN == errno)
             return 0;
         return -1;
     }
@@ -125,7 +142,10 @@ static inline int slave_process(const char *shell) {
     return -1;
 }
 
-static int set_status_bar(char status[], size_t len) {
+static int set_status_bar(char status[static 1], size_t len)
+    __attribute__((nonnull(1)));
+__attribute__((nonnull)) static int set_status_bar(char status[static 1],
+                                                   size_t len) {
     memset(status, 0, len);
     int s_len = snprintf(status, len, "%s", "[prom]: prom is running...");
     if (s_len < 0) {
@@ -133,7 +153,7 @@ static int set_status_bar(char status[], size_t len) {
     }
     for (; (size_t)s_len < len; status[s_len++] = ' ')
         ;
-    status[--s_len] = 0;
+    status[len - 1] = 0;
     return 0;
 }
 
@@ -148,7 +168,7 @@ static void draw_status_bar(char status[]) {
     move(y, x);
 }
 
-int file_read_cb(const char *path) {
+int file_read_cb(const char path[static 1]) {
     /*
      * This callback is called when a file WRITE gets intercepted.
      */
@@ -156,7 +176,7 @@ int file_read_cb(const char *path) {
     return 0;
 }
 
-int file_write_cb(const char *path) {
+int file_write_cb(const char path[static 1]) {
     /*
      * This callback is called when a file WRITE gets intercepted.
      */
@@ -196,15 +216,19 @@ static int master_process() {
             globe.got_sigwinch = false;
         }
 
-        int maxx = getmaxx(stdscr);
-        char *status_bar = malloc(maxx + 1);
-        set_status_bar(status_bar, maxx + 1);
-        draw_status_bar(status_bar);
-        free(status_bar);
+        int maxx = getmaxx(stdscr) + 1;
+        if (maxx > 0) {
+            char *status_bar = malloc(maxx);
+            // if (status_bar) {
+            set_status_bar(status_bar, maxx);
+            draw_status_bar(status_bar);
+            free(status_bar);
+            // }
+        }
 
         int ret = poll(pfds, sizeof(pfds) / sizeof(struct pollfd), 0);
         if (ret < 0) {
-            if (errno = EINTR) {
+            if (EINTR == errno) {
                 continue;
             }
             return -1;
