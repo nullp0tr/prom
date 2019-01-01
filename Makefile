@@ -8,15 +8,21 @@ prom-module.c modules/mods.c shell/shell.c shell/pty.c shell/terminal.c
 LIBS = ./libvterm/.libs/libvterm.a
 OBJS = $(SOURCES:.c=.o)
 OBJS += ./libtracer/tracer.o
+OBJS += ./errm/errm.o
+OBJS += ./dga/dga.o
 
-SUBDIRS = libtracer libvterm
+SUBDIRS = errm libtracer libvterm dga
+TESTDIRS = errm filesystem modules
 
 CPPCHECK=cppcheck
-CHECKFLAGS = -q --error-exitcode=1
-
+CHECKFLAGS = -q --error-exitcode=1 --inline-suppr
 
 main: $(OBJS) $(SUBDIRS)
 	$(CC) -o $(NAME) $(OBJS) $(LIBS) $(LDFLAGS)
+
+.PHONY: test
+test: 
+	for dir in $(TESTDIRS); do cd $$dir && make tests 2>&1 | ../colorize; cd .. ; done
 
 cppcheck.out: $(SOURCES)
 	$(CPPCHECK) $(CHECKFLAGS) $^  >$@

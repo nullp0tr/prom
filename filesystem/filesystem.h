@@ -18,6 +18,8 @@
 #ifndef _FILESYSTEM_H
 #define _FILESYSTEM_H
 
+#include "../dga/dga.h"
+#include "../errm/errm.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,12 +27,10 @@
 #include <unistd.h>
 #include <wordexp.h>
 
-#define foreach_file(var, files) for (char **var = files; *var; var++)
+char *abs_path(const char *relative_path);
 
-char *get_absolute_path(const char *relative_path);
+char **dir_content(const char *path, size_t *len_ret);
 
-char **dir_contents(const char *path);
-char **dir_content_names(const char *path);
-void free_dir_contents(char **files);
+void free_dir_content(char **files);
 
 #endif

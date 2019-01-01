@@ -16,140 +16,132 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 #include "filesystem.h"
+#include <errno.h>
 
-char *get_absolute_path(const char *relative_path) {
-    wordexp_t exp_result;
-    wordexp(relative_path, &exp_result, 0);
-    const char *translated_path = exp_result.we_wordv[0];
-    size_t translated_path_len = strlen(translated_path);
+edf_func1(void *, emalloc, size_t, size) {
+    void *p = malloc(size);
+    if (!p)
+        errm_error(NOT_ENOUGH_MEMORY);
+    return p;
+}
 
-    char *abs_path = NULL;
+/*
+void *erealloc(void *ptr, size_t size)
+*/
+edf_func2(void *, ereallloc, void *, ptr, size_t, size) {
+    void *p = realloc(ptr, size);
+    if (!p)
+        errm_error(NOT_ENOUGH_MEMORY);
+    return p;
+}
 
-    if (translated_path[0] != '/') {
-        char *cwd = getcwd(NULL, 0);
-        size_t cwd_len = strlen(cwd);
+/*
+void *expand(const char *path)
+*/
+edf_func1(void *, expand, const char *, path) {
 
-        size_t slash_len = 1;
-        size_t abs_path_len = translated_path_len + slash_len + cwd_len + 1;
-        abs_path = malloc(abs_path_len);
-        if (abs_path == NULL) {
-            return NULL;
-        }
-
-        abs_path[0] = '\0';
-        snprintf(abs_path, abs_path_len, "%s/", cwd);
-        free(cwd);
+    wordexp_t w;
+    if (wordexp(path, &w, 0)) {
+        errm_error(PARSING_ERROR);
+        return NULL;
     }
+    static_defer((DeferHandle)wordfree, sizeof(wordexp_t), &w);
 
-    else {
-        abs_path = malloc(translated_path_len + 1);
-        if (abs_path == NULL) {
-            return NULL;
-        }
-        abs_path[0] = '\0';
-    }
+    char *ret = emalloc(strlen(w.we_wordv[0]) + 1);
+    // cppcheck-suppress memleak
+    on_error_return(NULL);
 
-    strcat(abs_path, translated_path);
-    wordfree(&exp_result);
+    strcpy(ret, w.we_wordv[0]);
+    return ret;
+}
+
+/*
+char *abs_path_from_relative(const char *relative_path)
+*/
+edf_func1(char *, abs_path_from_relative, const char *, relative_path) {
+    char *cwd = getcwd(NULL, 0);
+    defer(free, cwd);
+
+    size_t abs_path_len =
+        strlen(relative_path) + sizeof('/') + strlen(cwd) + sizeof('\0');
+    char *abs_path = emalloc(abs_path_len);
+    // cppcheck-suppress memleak
+    on_error_return(NULL);
+
+    snprintf(abs_path, abs_path_len, "%s/%s", cwd, relative_path);
     return abs_path;
 }
 
-char **dir_content_names(const char *path) {
-    wordexp_t exp_result;
-    if (wordexp(path, &exp_result, 0)) {
-        return NULL;
-    }
-    const char *translated_path = exp_result.we_wordv[0];
+/*
+char *abs_path(const char *path)
+*/
+edf_func1(char *, abs_path, const char *, path) {
+    char *translated_path = expand(path);
+    on_error_return(NULL);
 
-    struct dirent *ep;
-    DIR *dp = opendir(translated_path);
-
-    if (dp == NULL) {
-        return NULL;
+    if (translated_path[0] != '/') {
+        defer(free, translated_path);
+        return abs_path_from_relative(translated_path);
     }
 
-    char **files = NULL;
-    size_t files_count = 0;
-    while ((ep = readdir(dp))) {
-        const char *file_name = ep->d_name;
-        if (file_name[0] == '.') {
-            continue;
-        }
-        size_t file_path_len = strlen(file_name) + 1;
-        char *file_path = NULL;
-        file_path = malloc(file_path_len * sizeof(char));
-        file_path[0] = '\0';
-        strcpy(file_path, file_name);
-
-        char **temp = realloc(files, sizeof(char *) * (files_count + 1));
-        if (!temp) {
-            free(files);
-            free(file_path);
-            files = NULL;
-            goto clean;
-        }
-        files = temp;
-
-        files[files_count++] = file_path;
-    }
-
-    char **temp = realloc(files, sizeof(char *) * (files_count + 1));
-    if (!temp) {
-        free(files);
-        files = NULL;
-        goto clean;
-    }
-    files = temp;
-
-    files[files_count] = NULL;
-
-clean:
-    closedir(dp);
-    wordfree(&exp_result);
-    return files;
+    return translated_path;
 }
 
-char **dir_contents(const char *path) {
-    char **files = NULL;
-    size_t files_count = 0;
+/*
+DIR *open_dir(const char *path)
+*/
+edf_func1(DIR *, open_dir, const char *, path) {
+    char *expanded_path = expand(path);
+    on_error_return(NULL);
+    defer(free, expanded_path);
 
-    wordexp_t exp_result;
-    if (wordexp(path, &exp_result, 0)) {
-        return NULL;
-    }
-    const char *translated_path = exp_result.we_wordv[0];
+    DIR *dp = opendir(expanded_path);
+    if (!dp)
+        errm_error_from_errno();
 
-    struct dirent *ep;
-    DIR *dp = opendir(translated_path);
-
-    if (dp == NULL) {
-        // error opening folder
-        return NULL;
-    }
-
-    while ((ep = readdir(dp))) {
-        const char *file_name = ep->d_name;
-        if (file_name[0] == '.') {
-            continue;
-        }
-        size_t file_path_len =
-            strlen(translated_path) + 1 /* backslash */ + strlen(file_name) + 1;
-        char *file_path = NULL;
-        file_path = malloc(file_path_len * sizeof(char));
-        file_path[0] = '\0';
-        snprintf(file_path, file_path_len, "%s/%s", translated_path, file_name);
-
-        files = realloc(files, sizeof(char *) * (files_count + 1));
-        files[files_count++] = file_path;
-    }
-    closedir(dp);
-    wordfree(&exp_result);
-    files = realloc(files, sizeof(char *) * (files_count + 1));
-    files[files_count] = NULL;
-    return files;
+    return dp;
 }
 
-void free_dir_contents(char **files) {
-    foreach_file(file, files) { free(*file); }
-    free(files);
+void close_dir(DIR *dp) { closedir(dp); }
+
+void free_dir_content(char **content) {
+    for (size_t i = 0; i < dga_len(content); i++) {
+        dga_free(content[i]);
+    }
+    dga_free(content);
+}
+
+/*
+char **dir_content(const char *path, size_t *len_ret)
+*/
+edf_func2(char **, dir_content, const char *, path, size_t *, len_ret) {
+    DIR *dp = open_dir(path);
+    on_error_return(NULL);
+    defer((DeferHandle)close_dir, dp);
+
+    *len_ret = 0;
+    char **names = dga_new(0, char *);
+
+    for (struct dirent *ep = readdir(dp); ep; ep = readdir(dp)) {
+        const char *file_name = ep->d_name;
+        if (file_name[0] == '.')
+            continue;
+
+        dga_grow_or(names, 1) goto memfail;
+
+        char *name = dga_new(strlen(file_name) + sizeof('\0'), char);
+        if (!name) {
+            goto memfail;
+        }
+
+        strcpy(name, file_name);
+        names[(*len_ret)++] = name;
+    }
+
+    return names;
+
+memfail:
+    errm_error(NOT_ENOUGH_MEMORY);
+    free_dir_content(names);
+    return NULL;
 }

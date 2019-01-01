@@ -20,6 +20,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+const char *modules_path = "/home/nullp0tr/.prom/modules/";
+
 const char *module_add_usage = "usage: prom-module-add path\n";
 
 static int cmd_arg_add(int argc, char *argv[]) {
@@ -30,10 +32,8 @@ static int cmd_arg_add(int argc, char *argv[]) {
 
     const char *mod_path = argv[1];
 
-    char *abs_mod_path = get_absolute_path(mod_path);
-    if (abs_mod_path == NULL) {
-        fprintf(stderr, "Error in translating mod path %s to absolute path.\n",
-                mod_path);
+    char *abs_mod_path = abs_path(mod_path);
+    if (!abs_mod_path) {
         exit_status = EXIT_FAILURE;
         goto exit_proc;
     }
@@ -42,13 +42,12 @@ static int cmd_arg_add(int argc, char *argv[]) {
     const char modules_path[] = "";
     char *mod_err = load_module(abs_mod_path, &mod, modules_path);
     if (mod_err) {
-        fprintf(stderr, "%s is not a valid module.\nError: %s.\n", mod_path,
-                mod_err);
+        fprintf(stderr, "%s is not a valid module.\n%s.\n", mod_path, mod_err);
         exit_status = EXIT_FAILURE;
         goto clean_abs_mod_path;
     }
 
-    err_int am = add_module(abs_mod_path, mod.name);
+    err_int am = add_module(abs_mod_path, mod.name, modules_path);
     if (am == -1) {
         fprintf(stderr, "Failed to add module from %s: ", mod_path);
         if (errno == EEXIST) {
@@ -78,7 +77,7 @@ static int cmd_arg_remove(int argc, char *argv[]) {
 
     const char *mod_name = argv[1];
 
-    err_int rm = rm_module(mod_name);
+    err_int rm = rm_module(mod_name, modules_path);
     if (rm == -1) {
         if (errno == ENOENT) {
             fprintf(stderr, "Module with name %s doesn't exist.\n", mod_name);
@@ -100,54 +99,36 @@ static int cmd_arg_list(int argc, char *argv[]) {
     }
 
     if (f_clean) {
-        char **damaged = clean_ul_mod_names();
+        size_t damaged_len;
+        char **damaged = clean_ul_mod_names(&damaged_len, modules_path);
         if (!damaged) {
-            goto memerr;
+            return -1;
         }
-        for (char **name = damaged; *name; name++) {
-            printf("Removed: %s\n", *name);
+
+        for (size_t i = 0; i < damaged_len; i++) {
+            char *name = damaged[i];
+            printf("Removed: %s\n", name);
         }
+
         free_ul_mod_names(damaged);
         return 0;
     }
 
-    char **names = mod_names();
-    if (!names) {
-        goto memerr;
-    }
-
-    size_t names_len = 0;
-    for (char **mod_name = names; *mod_name; mod_name++)
-        names_len++;
-
-    free_mod_names(names);
-
-    struct module **mods = installed_mods("");
+    size_t len_ret = 0;
+    struct module *mods = installed_mods(&len_ret, modules_path);
     if (!mods) {
-        goto memerr;
+        return 1;
     }
 
-    size_t mods_len = 0;
-    for (struct module **mod = mods; *mod; mod++) {
+    for (size_t i = 0; i < len_ret; i++) {
         printf("-----\n");
-        printf("Name: %s\n", (*mod)->name);
-        printf("Desc: %s\n", (*mod)->desc);
-        mods_len++;
+        printf("Name: %s\n", mods[i].name);
+        printf("Desc: %s\n", mods[i].desc);
     }
-    printf("-----\n");
-
     free_installed_mods(mods);
 
-    if (names_len > mods_len) {
-        printf("Some installed modules have changed location and are "
-               "unloadable.\n");
-        printf("Run 'prom module list --clean' to remove them.\n");
-    }
-
+    printf("-----\n");
     return 0;
-memerr:
-    fprintf(stderr, "There was an error allocating memory for the Modues\n");
-    return -1;
 }
 
 const char *module_usage = "usage: prom-module <command>\n\n"

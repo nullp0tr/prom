@@ -4,3 +4,9 @@
 [submodule "libvterm"]
 	path = libvterm
 	url = https://github.com/neovim/libvterm
+[submodule "dga"]
+	path = dga
+	url = https://github.com/nullp0tr/dga
+[submodule "errm"]
+	path = errm
+	url = https://github.com/nullp0tr/errm
