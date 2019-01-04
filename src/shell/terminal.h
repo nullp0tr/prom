@@ -17,7 +17,7 @@
  */
 #define _XOPEN_SOURCE 600
 
-#include "../libvterm/include/vterm.h"
+#include <vterm.h>
 #include "error.h"
 #include <fcntl.h>
 #include <locale.h>

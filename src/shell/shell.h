@@ -18,7 +18,7 @@
 #define _XOPEN_SOURCE 600
 
 #include "../libtracer/tracer.h"
-#include "../libvterm/include/vterm.h"
+#include <vterm.h>
 #include "../utils/logger.h"
 #include "error.h"
 #include "pty.h"

@@ -1,12 +1,12 @@
 [submodule "libtracer"]
-	path = libtracer
+	path = src/libtracer
 	url = https://github.com/nullp0tr/libtracer
 [submodule "libvterm"]
-	path = libvterm
+	path = src/libvterm
 	url = https://github.com/neovim/libvterm
 [submodule "dga"]
-	path = dga
+	path = src/dga
 	url = https://github.com/nullp0tr/dga
 [submodule "errm"]
-	path = errm
+	path = src/errm
 	url = https://github.com/nullp0tr/errm

@@ -1,0 +1,2 @@
+#!/bin/bash
+while inotifywait -e close_write *.c *.h filesystem/*; do make; done
