@@ -1,5 +1,3 @@
-SUBDIRS = . filesystem
-
 lib_LTLIBRARIES = libprom.la
 libprom_la_SOURCES = $(SRCS)
 include_HEADERS = prom.h
@@ -12,7 +10,3 @@ SRCS = prom.c prom-module.c prom-shell.c prom.h modules/mods.c modules/mods.h mo
 prom_SOURCES = main.c
 prom_LDADD = libprom.la $(CMOCKA_LIBS) $(VTERM_LIBS) -ldl -lncursesw
 
-# noinst_PROGRAMS = check_fs
-# TESTS = check_fs
-# check_fs_SOURCES = filesystem/check_fs.c $(SRCS)
-# check_fs_LDADD = $(prom_LDADD)

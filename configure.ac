@@ -17,4 +17,4 @@ AC_SUBST(VTERM_LIBS)
 : ${CFLAGS="-Wall -Wextra -Wpedantic -std=c11 -g -fsanitize=address"}
 AC_PROG_CC
 
-AC_OUTPUT(Makefile src/Makefile src/filesystem/Makefile)
+AC_OUTPUT(Makefile tests/Makefile src/Makefile)
