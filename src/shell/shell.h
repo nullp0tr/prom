@@ -15,10 +15,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+#ifndef _PROM_SHELL_H_
+#define _PROM_SHELL_H_
+
 #define _XOPEN_SOURCE 600
 
 #include "../libtracer/tracer.h"
-#include <vterm.h>
 #include "../utils/logger.h"
 #include "error.h"
 #include "pty.h"
@@ -41,5 +43,8 @@
 #include <sys/user.h>
 #include <termios.h>
 #include <unistd.h>
+#include <vterm.h>
 
 int shell_main_entry();
+
+#endif

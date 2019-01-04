@@ -103,7 +103,51 @@ void run_defers();
     }                                                                          \
     static inline ret errm##name(type arg)
 
+#define edf_static_func1(ret, name, type, arg)                                 \
+    static inline ret errm##name(type arg);                                    \
+    static ret name(type arg) {                                                \
+        errm_clear();                                                          \
+        int dpret = defer_push();                                              \
+        if (!dpret) {                                                          \
+            fprintf(stderr, "Defer-stack limit reached\n");                    \
+            fprintf(stderr, "-> in function \"%s\" on %s:%d\n", #name,         \
+                    __FILE__, __LINE__);                                       \
+            abort();                                                           \
+        }                                                                      \
+        ret r = errm##name(arg);                                               \
+        run_defers();                                                          \
+        dpret = defer_pop();                                                   \
+        if (!dpret) {                                                          \
+            fprintf(stderr, "Defer-stack underflow!!\n");                      \
+            abort();                                                           \
+        }                                                                      \
+        return r;                                                              \
+    }                                                                          \
+    static inline ret errm##name(type arg)
+
 #define edf_func2(ret, name, type, arg, type1, arg1)                           \
+    static inline ret errm##name(type arg, type1 arg1);                        \
+    ret name(type arg, type1 arg1) {                                           \
+        errm_clear();                                                          \
+        int dpret = defer_push();                                              \
+        if (!dpret) {                                                          \
+            fprintf(stderr, "Defer-stack limit reached\n");                    \
+            fprintf(stderr, "-> in function \"%s\" on %s:%d\n", #name,         \
+                    __FILE__, __LINE__);                                       \
+            abort();                                                           \
+        }                                                                      \
+        ret r = errm##name(arg, arg1);                                         \
+        run_defers();                                                          \
+        dpret = defer_pop();                                                   \
+        if (!dpret) {                                                          \
+            fprintf(stderr, "Defer-stack underflow!!\n");                      \
+            abort();                                                           \
+        }                                                                      \
+        return r;                                                              \
+    }                                                                          \
+    static inline ret errm##name(type arg, type1 arg1)
+
+#define edf_static_func2(ret, name, type, arg, type1, arg1)                    \
     static inline ret errm##name(type arg, type1 arg1);                        \
     ret name(type arg, type1 arg1) {                                           \
         errm_clear();                                                          \

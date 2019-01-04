@@ -18,7 +18,8 @@
 #include "filesystem.h"
 #include <errno.h>
 
-edf_func1(void *, emalloc, size_t, size) {
+static void *emalloc(size_t size);
+edf_static_func1(void *, emalloc, size_t, size) {
     void *p = malloc(size);
     if (!p)
         errm_error(NOT_ENOUGH_MEMORY);
@@ -28,7 +29,8 @@ edf_func1(void *, emalloc, size_t, size) {
 /*
 void *erealloc(void *ptr, size_t size)
 */
-edf_func2(void *, ereallloc, void *, ptr, size_t, size) {
+static void *ereallloc(void *ptr, size_t size);
+edf_static_func2(void *, ereallloc, void *, ptr, size_t, size) {
     void *p = realloc(ptr, size);
     if (!p)
         errm_error(NOT_ENOUGH_MEMORY);
@@ -38,7 +40,8 @@ edf_func2(void *, ereallloc, void *, ptr, size_t, size) {
 /*
 void *expand(const char *path)
 */
-edf_func1(void *, expand, const char *, path) {
+static void *expand(const char *path);
+edf_static_func1(void *, expand, const char *, path) {
 
     wordexp_t w;
     if (wordexp(path, &w, 0)) {
@@ -55,10 +58,8 @@ edf_func1(void *, expand, const char *, path) {
     return ret;
 }
 
-/*
-char *abs_path_from_relative(const char *relative_path)
-*/
-edf_func1(char *, abs_path_from_relative, const char *, relative_path) {
+static char *abs_path_from_relative(const char *relative_path);
+edf_static_func1(char *, abs_path_from_relative, const char *, relative_path) {
     char *cwd = getcwd(NULL, 0);
     defer(free, cwd);
 
@@ -72,9 +73,6 @@ edf_func1(char *, abs_path_from_relative, const char *, relative_path) {
     return abs_path;
 }
 
-/*
-char *abs_path(const char *path)
-*/
 edf_func1(char *, abs_path, const char *, path) {
     char *translated_path = expand(path);
     on_error_return(NULL);
@@ -90,7 +88,7 @@ edf_func1(char *, abs_path, const char *, path) {
 /*
 DIR *open_dir(const char *path)
 */
-edf_func1(DIR *, open_dir, const char *, path) {
+edf_static_func1(DIR *, open_dir, const char *, path) {
     char *expanded_path = expand(path);
     on_error_return(NULL);
     defer(free, expanded_path);
@@ -102,7 +100,7 @@ edf_func1(DIR *, open_dir, const char *, path) {
     return dp;
 }
 
-void close_dir(DIR *dp) { closedir(dp); }
+static void close_dir(DIR *dp) { closedir(dp); }
 
 void free_dir_content(char **content) {
     for (size_t i = 0; i < dga_len(content); i++) {

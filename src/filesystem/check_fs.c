@@ -15,20 +15,25 @@
 
 static void test_abs_path(void **state) {
     (void)state;
+    char tmp[] = "XXXXXX";
+    int fd = mkstemp(tmp);
+    assert_int_not_equal(fd, -1);
 
-    const char *path = "filesystem.c";
-    char *absolute_path = abs_path(path);
+    char *absolute_path = abs_path(tmp);
+    assert_non_null(absolute_path);
     assert_true(absolute_path[0] == '/');
+    printf("%s\n", tmp);
+    printf("%s\n", absolute_path);
 
     struct stat path_stat;
-    stat(path, &path_stat);
+    stat(tmp, &path_stat);
 
     struct stat abs_stat;
     stat(absolute_path, &abs_stat);
+    remove(tmp);
+    free(absolute_path);
 
     assert_true(path_stat.st_ino == abs_stat.st_ino);
-
-    free(absolute_path);
 }
 
 static void test_abs_path_unparsable(void **state) {

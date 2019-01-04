@@ -15,6 +15,10 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
+#ifndef _PROM_API_H_
+#define _PROM_API_H_
+
 #include <sys/user.h>
 
 struct module_cbs {
@@ -23,3 +27,5 @@ struct module_cbs {
     void (*syscall)(struct user_regs_struct *regs);
     void (*cmd)(const char *cmd);
 };
+
+#endif

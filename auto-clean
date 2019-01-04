@@ -4,4 +4,8 @@ make mostlyclean
 make clean
 make maintainer-clean
 
-rm COPYING INSTALL install-sh missing compile depcomp Makefile.in src/Makefile.in aclocal.m4 configure
+find . | grep -E ".Makefile\.in" | xargs rm
+find . | grep -E "\.deps$" | xargs rm -rf
+
+rm COPYING INSTALL install-sh missing compile depcomp aclocal.m4 configure
+rm config.sub config.guess ltmain.sh test-driver autom4te.cache

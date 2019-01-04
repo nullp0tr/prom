@@ -18,6 +18,11 @@
 #ifndef PROM_H
 #define PROM_H
 
+#include "filesystem/filesystem.h"
+#include "modules/api.h"
+#include "modules/mods.h"
+#include "shell/shell.h"
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
